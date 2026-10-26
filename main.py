@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw
 
 # ===================== 全局常量与路径规范 =====================
 APP_NAME = "IPMonitor"
-APP_VERSION = "2.1.0"
+APP_VERSION = "1.0.0"
 CHECKED_CHAR = '✅ 启用'
 UNCHECKED_CHAR = '⏸️ 停用'
 REGISTRY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"

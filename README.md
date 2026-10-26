@@ -1,6 +1,7 @@
 # IPMonitor - 内网设备离线监控告警助手
 
 <p align="left">
+  <img src="https://img.shields.io/badge/Version-1.0.0-orange.svg" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6.svg" alt="Platform">
