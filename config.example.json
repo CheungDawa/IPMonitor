@@ -1,0 +1,57 @@
+{
+    "monitoring": {
+        "interval_seconds": 60,
+        "retries_before_offline": 3,
+        "timeout_seconds": 3,
+        "re_alert_interval_minutes": 60,
+        "max_concurrent_workers": 50
+    },
+    "alert": {
+        "desktop_notify": true,
+        "webhook_enabled": false,
+        "webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY",
+        "webhook_type": "wecom"
+    },
+    "email": {
+        "enabled": false,
+        "smtp_server": "smtp.qq.com",
+        "smtp_port": 465,
+        "use_ssl": true,
+        "sender_email": "example@qq.com",
+        "password": "your_smtp_auth_code",
+        "recipient_email": "admin@example.com",
+        "cc_email": "",
+        "quiet_hours_enabled": false,
+        "quiet_start_hour": 22,
+        "quiet_end_hour": 8
+    },
+    "system": {
+        "auto_start": false
+    },
+    "targets": [
+        {
+            "name": "机房核心网关",
+            "address": "192.168.1.1",
+            "method": "ping",
+            "port": "",
+            "note": "主路由出口",
+            "enabled": true
+        },
+        {
+            "name": "NAS 文件存储",
+            "address": "192.168.1.10",
+            "method": "tcp",
+            "port": "445",
+            "note": "SMB 共享端口探测",
+            "enabled": true
+        },
+        {
+            "name": "本地服务器 (ARP)",
+            "address": "192.168.1.20",
+            "method": "arp",
+            "port": "",
+            "note": "同子网二层 MAC 探测",
+            "enabled": true
+        }
+    ]
+}
