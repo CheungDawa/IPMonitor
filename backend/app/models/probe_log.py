@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -12,6 +12,6 @@ class ProbeLog(Base):
     success = Column(Boolean, nullable=False)
     latency_ms = Column(Float, nullable=True)
     error_message = Column(String(255), nullable=True)
-    probe_time = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    probe_time = Column(DateTime, default=datetime.now, nullable=False, index=True)
 
     device = relationship("Device", back_populates="probe_logs")

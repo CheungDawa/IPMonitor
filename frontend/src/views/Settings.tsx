@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Settings as SettingsIcon, Database, HardDrive, Shield, KeyRound, Download, RefreshCw, Cpu, Activity, MapPin, Save } from 'lucide-react';
 import { api } from '../services/api';
+import { formatDateTime } from '../utils/format';
 
 export const Settings: React.FC = () => {
   const [sysStatus, setSysStatus] = useState<any>(null);
@@ -192,7 +193,7 @@ export const Settings: React.FC = () => {
                 <tr key={idx}>
                   <td style={{ fontWeight: 600, color: '#38bdf8' }}>{b.filename}</td>
                   <td>{(b.size_bytes / 1024).toFixed(1)} KB</td>
-                  <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{new Date(b.created_at).toLocaleString()}</td>
+                  <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{formatDateTime(b.created_at)}</td>
                 </tr>
               ))
             )}

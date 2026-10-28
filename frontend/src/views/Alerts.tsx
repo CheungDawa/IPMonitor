@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Send, CheckCircle2, ShieldCheck, Mail, MessageSquare, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
+import { formatDateTime } from '../utils/format';
 
 export const Alerts: React.FC = () => {
   const [tab, setTab] = useState<'records' | 'channels'>('records');
@@ -208,7 +209,7 @@ export const Alerts: React.FC = () => {
                       </div>
                     </td>
                     <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                      {al.triggered_at ? new Date(al.triggered_at).toLocaleString() : '-'}
+                      {formatDateTime(al.triggered_at)}
                     </td>
                     <td style={{ fontSize: '0.75rem', color: '#818cf8' }}>
                       {al.channels_sent || '-'}

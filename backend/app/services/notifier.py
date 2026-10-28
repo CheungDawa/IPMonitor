@@ -43,9 +43,9 @@ class NotificationHub:
                 title=title,
                 content=content,
                 status="active" if alert_type in ("offline", "continuous_offline") else "resolved",
-                triggered_at=datetime.now(timezone.utc),
+                triggered_at=datetime.now(),
                 duration_seconds=duration_sec,
-                resolved_at=datetime.now(timezone.utc) if alert_type == "recovery" else None
+                resolved_at=datetime.now() if alert_type == "recovery" else None
             )
             db.add(record)
             db.commit()
@@ -63,7 +63,7 @@ class NotificationHub:
             "alert_type": alert_type,
             "title": title,
             "content": content,
-            "timestamp": datetime.now(timezone.utc)
+            "timestamp": datetime.now()
         })
 
     def _worker_loop(self):

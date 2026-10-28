@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -21,7 +21,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
     一次性聚合并返回大屏展示所需的所有态势感知数据（统计指标、地图点位、时延排查、实时告警与事件流水），
     彻底避免前端大屏频繁调用多个分散接口。
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
 
     # 1. 核心运行指标
     total = db.query(Device).count()
@@ -50,7 +50,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "longitude": d.longitude,
             "location_address": d.location_address,
             "location_note": d.location_note,
-            "last_probe_time": d.last_probe_time.isoformat() if d.last_probe_time else None
+            "last_probe_time": d.last_probe_time.strftime("%Y-%m-%d %H:%M:%S") if d.last_probe_time else None
         })
 
     # 2.5 全量设备状态矩阵 (包含所有受控设备，故障设备置顶排序)
@@ -69,7 +69,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "status": d.status,
             "method": d.method,
             "consecutive_failures": d.failure_count,
-            "last_probe_time": d.last_probe_time.isoformat() if d.last_probe_time else None
+            "last_probe_time": d.last_probe_time.strftime("%Y-%m-%d %H:%M:%S") if d.last_probe_time else None
         })
 
     # 3. 分组健康度矩阵
@@ -125,7 +125,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "alert_type": a.alert_type,
             "title": a.title,
             "content": a.content,
-            "triggered_at": a.triggered_at.isoformat() if a.triggered_at else None
+            "triggered_at": a.triggered_at.strftime("%Y-%m-%d %H:%M:%S") if a.triggered_at else None
         })
 
     # 6. 实时状态变动流水 (Ticker)
@@ -146,7 +146,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "event_type": ev.event_type,
             "duration_seconds": ev.duration_seconds,
             "details": ev.details,
-            "created_at": ev.created_at.isoformat() if ev.created_at else None
+            "created_at": ev.created_at.strftime("%Y-%m-%d %H:%M:%S") if ev.created_at else None
         })
 
     # 6. 地图默认视角设定 (用户在后台可自定义中心经纬度、缩放级别与焦点名称)
@@ -188,5 +188,5 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
         "latency_nodes": latency_nodes,
         "active_alerts": alerts_data,
         "events_ticker": events_ticker,
-        "server_time": now.isoformat()
+        "server_time": now.strftime("%Y-%m-%d %H:%M:%S")
     })

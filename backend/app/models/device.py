@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -41,8 +41,8 @@ class Device(Base):
     location_note = Column(String(255), nullable=True)           # 楼栋/机房/机柜补充说明
     
     note = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
 
     # 关联
     group = relationship("DeviceGroup", back_populates="devices")

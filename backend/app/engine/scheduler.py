@@ -76,7 +76,7 @@ class MonitorEngine:
     def _schedule_due_devices(self):
         db = SessionLocal()
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now()
             devices = db.query(Device).filter(Device.enabled == True).all()
 
             for dev in devices:
@@ -94,8 +94,8 @@ class MonitorEngine:
                     is_due = True
                 else:
                     last_time = dev.last_probe_time
-                    if last_time.tzinfo is None:
-                        last_time = last_time.replace(tzinfo=timezone.utc)
+                    if last_time.tzinfo is not None:
+                        last_time = last_time.replace(tzinfo=None)
                     if (now - last_time).total_seconds() >= interval:
                         is_due = True
 
@@ -146,8 +146,8 @@ class MonitorEngine:
                 self.probing_set.discard(device_id)
 
     def _apply_probe_result(self, db: Session, dev: Device, res):
-        now = datetime.now(timezone.utc)
-        now_str = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+        now = datetime.now()
+        now_str = now.strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. 记录探测日志
         log = ProbeLog(
@@ -173,8 +173,8 @@ class MonitorEngine:
                 dur_sec = 0
                 if dev.offline_since:
                     off_time = dev.offline_since
-                    if off_time.tzinfo is None:
-                        off_time = off_time.replace(tzinfo=timezone.utc)
+                    if off_time.tzinfo is not None:
+                        off_time = off_time.replace(tzinfo=None)
                     dur_sec = int((now - off_time).total_seconds())
 
                 dur_str = format_duration_seconds(dur_sec)
@@ -251,13 +251,13 @@ class MonitorEngine:
                     # 持续离线中的重告警抑制检查
                     if dev.last_alert_time:
                         last_alert = dev.last_alert_time
-                        if last_alert.tzinfo is None:
-                            last_alert = last_alert.replace(tzinfo=timezone.utc)
+                        if last_alert.tzinfo is not None:
+                            last_alert = last_alert.replace(tzinfo=None)
                         if (now - last_alert).total_seconds() >= re_alert_gap:
                             dev.last_alert_time = now
                             off_time = dev.offline_since or now
-                            if off_time.tzinfo is None:
-                                off_time = off_time.replace(tzinfo=timezone.utc)
+                            if off_time.tzinfo is not None:
+                                off_time = off_time.replace(tzinfo=None)
                             dur_sec = int((now - off_time).total_seconds())
                             dur_str = format_duration_seconds(dur_sec)
 

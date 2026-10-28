@@ -1,5 +1,7 @@
 import json
 import os
+import re
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from sqlalchemy.orm import Session
 from backend.app.core.database import Base, engine, SessionLocal
@@ -8,7 +10,7 @@ from backend.app.core.logging import logger
 from backend.app.models.user import User
 from backend.app.models.group import DeviceGroup
 from backend.app.models.device import Device
-from backend.app.models.alert import AlertRule
+from backend.app.models.alert import AlertRule, AlertRecord
 from backend.app.models.setting import SystemSetting
 
 from backend.app.core.config import settings
@@ -70,6 +72,9 @@ def init_db(db: Session = None):
 
         # 4. 平滑迁移旧版 config.json / config.example.json
         migrate_legacy_config(db, default_group.id)
+
+        # 5. 平滑校准历史 UTC 告警记录为宿主机本地时间
+        migrate_utc_to_local_time(db)
         
     except Exception as e:
         logger.error(f"数据库初始化或迁移异常: {e}", exc_info=True)
@@ -145,3 +150,55 @@ def migrate_legacy_config(db: Session, default_group_id: int):
     except Exception as e:
         logger.warning(f"迁移旧版配置发生告警 (非致命): {e}")
         db.rollback()
+
+def migrate_utc_to_local_time(db: Session):
+    """检测并平滑升级历史 UTC 告警记录为当前宿主机的本地时间"""
+    try:
+        import re
+        from datetime import timezone, timedelta
+        local_now = datetime.now()
+        utc_now = datetime.now(timezone.utc).replace(tzinfo=None)
+        offset = local_now - utc_now
+        
+        # 如果时差小于 1 分钟（例如系统本身就是 UTC 时区），无需调整
+        if abs(offset.total_seconds()) < 60:
+            return
+
+        records = db.query(AlertRecord).filter(AlertRecord.content.like("%UTC%")).all()
+        if not records:
+            return
+
+        logger.info(f"检测到 {len(records)} 条历史 UTC 告警记录，正在平滑校准为宿主机本地时间 (偏移量: {offset})...")
+        for r in records:
+            if r.triggered_at:
+                r.triggered_at = r.triggered_at + offset
+            if r.resolved_at:
+                r.resolved_at = r.resolved_at + offset
+            
+            def _replace_utc_time(m):
+                time_str = m.group(1)
+                try:
+                    dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+                    local_dt = dt + offset
+                    return "告警时间：" + local_dt.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    return f"告警时间：{time_str}"
+
+            def _replace_recovery_time(m):
+                time_str = m.group(1)
+                try:
+                    dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
+                    local_dt = dt + offset
+                    return "恢复时间：" + local_dt.strftime("%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    return f"恢复时间：{time_str}"
+
+            r.content = re.sub(r"告警时间：(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) UTC", _replace_utc_time, r.content)
+            r.content = re.sub(r"恢复时间：(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) UTC", _replace_recovery_time, r.content)
+            r.content = r.content.replace(" UTC", "")
+        
+        db.commit()
+        logger.info("历史告警记录已全部成功校准至宿主机本地时间。")
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"历史告警时间校准跳过: {e}")

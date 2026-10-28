@@ -16,6 +16,7 @@ services:
     environment:
       - PORT=8000
       - HOST=0.0.0.0
+      - TZ=Asia/Shanghai
       - SECRET_KEY=${SECRET_KEY:-ipmonitor_web_super_secret_key_change_in_production_2026}
     # 授予容器底层 raw socket 能力以允许无特权执行 ICMP Ping 探活
     cap_add:

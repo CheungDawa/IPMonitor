@@ -21,6 +21,7 @@ import {
   X
 } from 'lucide-react';
 import { api } from '../services/api';
+import { formatTimeOnly } from '../utils/format';
 
 interface CockpitProps {
   onEnterAdmin: () => void;
@@ -796,7 +797,7 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
                               连断 {p.consecutive_failures} 次
                             </span>
                           ) : p.last_probe_time ? (
-                            <span>{new Date(p.last_probe_time).toLocaleTimeString()}</span>
+                            <span>{formatTimeOnly(p.last_probe_time)}</span>
                           ) : (
                             <span>-</span>
                           )}
@@ -845,7 +846,7 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#f87171', marginBottom: '2px' }}>
                       <span>{al.device_name}</span>
                       <span style={{ fontSize: '0.7rem', color: '#fca5a5' }}>
-                        {al.triggered_at ? new Date(al.triggered_at).toLocaleTimeString() : ''}
+                        {formatTimeOnly(al.triggered_at)}
                       </span>
                     </div>
                     <div style={{ color: '#e2e8f0', fontSize: '0.75rem', marginBottom: '2px' }}>IP: {al.ip_address}</div>

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -39,8 +39,8 @@ def list_alerts(
             "title": r.title,
             "content": r.content,
             "status": r.status,
-            "triggered_at": r.triggered_at.isoformat() if r.triggered_at else None,
-            "resolved_at": r.resolved_at.isoformat() if r.resolved_at else None,
+            "triggered_at": r.triggered_at.strftime("%Y-%m-%d %H:%M:%S") if r.triggered_at else None,
+            "resolved_at": r.resolved_at.strftime("%Y-%m-%d %H:%M:%S") if r.resolved_at else None,
             "duration_seconds": r.duration_seconds,
             "channels_sent": r.channels_sent
         })
@@ -62,13 +62,14 @@ def resolve_alert(
     if not record:
         raise NotFoundException("告警记录不存在")
 
+    now = datetime.now()
     record.status = "resolved"
-    record.resolved_at = datetime.now(timezone.utc)
+    record.resolved_at = now
     if record.triggered_at:
         t = record.triggered_at
-        if t.tzinfo is None:
-            t = t.replace(tzinfo=timezone.utc)
-        record.duration_seconds = int((record.resolved_at - t).total_seconds())
+        if t.tzinfo is not None:
+            t = t.replace(tzinfo=None)
+        record.duration_seconds = int((now - t).total_seconds())
 
     db.commit()
     return success_response(message="告警状态已标记为已处理")

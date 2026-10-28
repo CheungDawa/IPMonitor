@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { LocationPicker } from '../components/LocationPicker';
+import { formatDateTime } from '../utils/format';
 
 export const DeviceList: React.FC = () => {
   const [devices, setDevices] = useState<any[]>([]);
@@ -423,7 +424,7 @@ export const DeviceList: React.FC = () => {
                       )}
                     </td>
                     <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                      {d.last_probe_time ? new Date(d.last_probe_time).toLocaleTimeString() : '-'}
+                      {formatDateTime(d.last_probe_time)}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.35rem' }}>

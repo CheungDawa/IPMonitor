@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -11,6 +11,6 @@ class DeviceGroup(Base):
     description = Column(String(255), nullable=True)
     color = Column(String(20), default="#3B82F6", nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     devices = relationship("Device", back_populates="group")

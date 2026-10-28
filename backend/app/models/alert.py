@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -13,7 +13,7 @@ class AlertRule(Base):
     notify_recovery = Column(Boolean, default=True, nullable=False)
     enabled = Column(Boolean, default=True, nullable=False)
     channels = Column(String(255), default="wecom,dingtalk,feishu,email", nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     records = relationship("AlertRecord", back_populates="rule")
 
@@ -27,7 +27,7 @@ class AlertRecord(Base):
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
     status = Column(String(20), default="active", index=True, nullable=False)  # active, resolved
-    triggered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    triggered_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
     resolved_at = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
     channels_sent = Column(String(255), nullable=True)

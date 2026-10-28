@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
@@ -13,6 +13,6 @@ class DeviceEvent(Base):
     event_type = Column(String(50), nullable=False)  # offline, online, status_change
     duration_seconds = Column(Integer, nullable=True)  # 离线持续时长等
     details = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
 
     device = relationship("Device", back_populates="events")

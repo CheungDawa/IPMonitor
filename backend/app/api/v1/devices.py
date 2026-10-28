@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -15,6 +15,9 @@ from backend.app.schemas.device import DeviceCreate, DeviceUpdate
 from backend.app.services.geo import validate_coordinates
 from backend.app.engine.scheduler import monitor_engine
 from backend.app.api.deps import get_current_user
+
+def dt_str(dt: Optional[datetime]) -> Optional[str]:
+    return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
 
 router = APIRouter(prefix="/devices", tags=["设备管理"])
 
@@ -64,9 +67,9 @@ def list_devices(
             "enabled": d.enabled,
             "status": d.status,
             "failure_count": d.failure_count,
-            "last_probe_time": d.last_probe_time.isoformat() if d.last_probe_time else None,
-            "last_online_time": d.last_online_time.isoformat() if d.last_online_time else None,
-            "offline_since": d.offline_since.isoformat() if d.offline_since else None,
+            "last_probe_time": dt_str(d.last_probe_time),
+            "last_online_time": dt_str(d.last_online_time),
+            "offline_since": dt_str(d.offline_since),
             "latitude": d.latitude,
             "longitude": d.longitude,
             "location_address": d.location_address,
@@ -75,11 +78,11 @@ def list_devices(
             "location_status": d.location_status,
             "location_accuracy": d.location_accuracy,
             "location_provider": d.location_provider,
-            "location_updated_at": d.location_updated_at.isoformat() if d.location_updated_at else None,
+            "location_updated_at": dt_str(d.location_updated_at),
             "location_note": d.location_note,
             "note": d.note,
-            "created_at": d.created_at.isoformat() if d.created_at else None,
-            "updated_at": d.updated_at.isoformat() if d.updated_at else None
+            "created_at": dt_str(d.created_at),
+            "updated_at": dt_str(d.updated_at)
         })
 
     return success_response(data={
@@ -106,7 +109,7 @@ def create_device(
         if not group:
             raise ValidationException("指定的分组不存在")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     is_located = req.latitude is not None and req.longitude is not None
     loc_status = "located" if is_located else "unlocated"
     loc_method = req.location_method if is_located else "none"
@@ -180,9 +183,9 @@ def get_device(device_id: int, db: Session = Depends(get_db)):
         "enabled": device.enabled,
         "status": device.status,
         "failure_count": device.failure_count,
-        "last_probe_time": device.last_probe_time.isoformat() if device.last_probe_time else None,
-        "last_online_time": device.last_online_time.isoformat() if device.last_online_time else None,
-        "offline_since": device.offline_since.isoformat() if device.offline_since else None,
+        "last_probe_time": dt_str(device.last_probe_time),
+        "last_online_time": dt_str(device.last_online_time),
+        "offline_since": dt_str(device.offline_since),
         "latitude": device.latitude,
         "longitude": device.longitude,
         "location_address": device.location_address,
@@ -191,11 +194,11 @@ def get_device(device_id: int, db: Session = Depends(get_db)):
         "location_status": device.location_status,
         "location_accuracy": device.location_accuracy,
         "location_provider": device.location_provider,
-        "location_updated_at": device.location_updated_at.isoformat() if device.location_updated_at else None,
+        "location_updated_at": dt_str(device.location_updated_at),
         "location_note": device.location_note,
         "note": device.note,
-        "created_at": device.created_at.isoformat() if device.created_at else None,
-        "updated_at": device.updated_at.isoformat() if device.updated_at else None,
+        "created_at": dt_str(device.created_at),
+        "updated_at": dt_str(device.updated_at),
         "recent_probe_logs": [
             {
                 "id": pl.id,
@@ -203,7 +206,7 @@ def get_device(device_id: int, db: Session = Depends(get_db)):
                 "success": pl.success,
                 "latency_ms": pl.latency_ms,
                 "error_message": pl.error_message,
-                "probe_time": pl.probe_time.isoformat()
+                "probe_time": dt_str(pl.probe_time)
             }
             for pl in probe_logs
         ],
@@ -215,7 +218,7 @@ def get_device(device_id: int, db: Session = Depends(get_db)):
                 "event_type": ev.event_type,
                 "duration_seconds": ev.duration_seconds,
                 "details": ev.details,
-                "created_at": ev.created_at.isoformat()
+                "created_at": dt_str(ev.created_at)
             }
             for ev in events
         ]
@@ -233,7 +236,7 @@ def update_device(
     if not device:
         raise NotFoundException("指定设备不存在")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
 
     # 1. 位置变更与保护逻辑
     if req.clear_location:

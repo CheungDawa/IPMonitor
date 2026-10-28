@@ -1,7 +1,7 @@
 import io
 import csv
 import urllib.parse
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
@@ -63,7 +63,7 @@ def get_history_events(
             "event_type": ev.event_type,
             "duration_seconds": ev.duration_seconds,
             "details": ev.details,
-            "created_at": ev.created_at.isoformat() if ev.created_at else None
+            "created_at": ev.created_at.strftime("%Y-%m-%d %H:%M:%S") if ev.created_at else None
         })
 
     return success_response(data={
@@ -81,7 +81,7 @@ def get_report_statistics(days: int = Query(7, ge=1, le=90), db: Session = Depen
     - 平均故障恢复时间 (MTTR)
     - 整体可用率
     """
-    since_time = datetime.now(timezone.utc) - timedelta(days=days)
+    since_time = datetime.now() - timedelta(days=days)
 
     total_devices = db.query(Device).filter(Device.enabled == True).count()
     events = db.query(DeviceEvent).filter(DeviceEvent.created_at >= since_time).all()
@@ -149,7 +149,7 @@ def get_report_statistics(days: int = Query(7, ge=1, le=90), db: Session = Depen
 @router.get("/export-excel")
 def export_report_excel(days: int = Query(7, ge=1, le=90), db: Session = Depends(get_db)):
     """生成并下载多工作表综合运维报表"""
-    since_time = datetime.now(timezone.utc) - timedelta(days=days)
+    since_time = datetime.now() - timedelta(days=days)
     wb = Workbook()
 
     header_fill = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")

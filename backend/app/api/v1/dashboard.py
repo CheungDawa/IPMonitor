@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -71,7 +71,7 @@ def get_recent_events(limit: int = Query(15, ge=1, le=100), db: Session = Depend
             "event_type": ev.event_type,
             "duration_seconds": ev.duration_seconds,
             "details": ev.details,
-            "created_at": ev.created_at.isoformat() if ev.created_at else None
+            "created_at": ev.created_at.strftime("%Y-%m-%d %H:%M:%S") if ev.created_at else None
         })
 
     return success_response(data=items)
@@ -79,7 +79,7 @@ def get_recent_events(limit: int = Query(15, ge=1, le=100), db: Session = Depend
 @router.get("/fault-trend")
 def get_fault_trend(db: Session = Depends(get_db)):
     """按时间窗口统计过去 24 小时故障与恢复趋势折线数据"""
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     points = []
     
     # 划分 12 个点，每个点跨度 2 小时

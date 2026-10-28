@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { DeviceMap } from '../components/DeviceMap';
+import { formatTimeOnly } from '../utils/format';
 
 export const Dashboard: React.FC<{ onNavigate: (view: string, filter?: any) => void }> = ({ onNavigate }) => {
   const [stats, setStats] = useState<any>({
@@ -205,7 +206,7 @@ export const Dashboard: React.FC<{ onNavigate: (view: string, filter?: any) => v
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                       <strong style={{ color: '#f8fafc' }}>{ev.device_name}</strong>
                       <span style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                        {ev.created_at ? new Date(ev.created_at).toLocaleTimeString() : ''}
+                        {formatTimeOnly(ev.created_at)}
                       </span>
                     </div>
                     <div style={{ color: '#94a3b8' }}>

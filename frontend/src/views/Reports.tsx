@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart3, Download, Clock, AlertOctagon, TrendingUp, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
+import { formatDateTime } from '../utils/format';
 
 export const Reports: React.FC = () => {
   const [days, setDays] = useState(7);
@@ -218,7 +219,7 @@ export const Reports: React.FC = () => {
                   <td>{ev.duration_seconds > 0 ? `${ev.duration_seconds}秒` : '-'}</td>
                   <td style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{ev.details}</td>
                   <td style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    {ev.created_at ? new Date(ev.created_at).toLocaleString() : '-'}
+                    {formatDateTime(ev.created_at)}
                   </td>
                 </tr>
               ))
