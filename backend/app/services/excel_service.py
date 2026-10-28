@@ -246,8 +246,10 @@ def precheck_excel_file(file_bytes: bytes) -> Dict[str, Any]:
     col_note = find_col("备注")
 
     db = SessionLocal()
-    existing_ips = {d.ip_address for d in db.query(Device.ip_address).all()}
-    db.close()
+    try:
+        existing_ips = {d.ip_address for d in db.query(Device.ip_address).all()}
+    finally:
+        db.close()
 
     errors = []
     preview_items = []

@@ -110,25 +110,40 @@ class MonitorEngine:
             db.close()
 
     def _probe_single_device(self, device_id: int):
+        # 1. 快速读取待探测配置，随后立即释放 DB 会话 (网络探测 I/O 期间绝不持有数据库连接)
         db = SessionLocal()
         try:
             dev = db.query(Device).filter(Device.id == device_id).first()
             if not dev or not dev.enabled:
                 return
-
-            # 执行真实探测
+            method = dev.method
+            ip_address = dev.ip_address
+            port = dev.port
             timeout = dev.timeout_seconds or settings.DEFAULT_TIMEOUT_SECONDS
-            res = execute_probe(dev.method, dev.ip_address, dev.port, timeout_sec=timeout)
+        except Exception as e:
+            logger.error(f"读取设备 #{device_id} 基础配置失败: {e}")
+            return
+        finally:
+            db.close()
 
-            # 状态机更新
-            self._apply_probe_result(db, dev, res)
+        try:
+            # 2. 执行网络探测 (可能需要 1~3 秒超时，此过程完全不占用任何数据库连接)
+            res = execute_probe(method, ip_address, port, timeout_sec=timeout)
+
+            # 3. 探测完成后，重新开启独立会话更新状态机并入库
+            db = SessionLocal()
+            try:
+                dev = db.query(Device).filter(Device.id == device_id).first()
+                if dev and dev.enabled:
+                    self._apply_probe_result(db, dev, res)
+            finally:
+                db.close()
 
         except Exception as e:
             logger.error(f"探测设备 #{device_id} 过程异常: {e}", exc_info=True)
         finally:
             with self.lock:
                 self.probing_set.discard(device_id)
-            db.close()
 
     def _apply_probe_result(self, db: Session, dev: Device, res):
         now = datetime.now(timezone.utc)
