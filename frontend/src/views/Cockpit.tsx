@@ -16,7 +16,9 @@ import {
   Zap,
   BellRing,
   ArrowRight,
-  MapPin
+  MapPin,
+  Search,
+  X
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -33,6 +35,8 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString());
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [centerView, setCenterView] = useState<'map' | 'grid'>('map');
+  const [gridSearch, setGridSearch] = useState('');
+  const [gridFilter, setGridFilter] = useState<'ALL' | 'OFFLINE' | 'UNKNOWN' | 'ONLINE' | 'DISABLED'>('ALL');
   const [refreshCountdown, setRefreshCountdown] = useState(10);
   const [mapTheme, setMapTheme] = useState<'autonavi' | 'satellite'>('autonavi');
 
@@ -130,9 +134,9 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
     }
   }, [mapTheme]);
 
-  // 初始化地图
+  // 初始化地图 (常驻初始化，无需在切换视图时重复销毁创建 DOM)
   useEffect(() => {
-    if (centerView !== 'map' || !mapContainerRef.current) return;
+    if (!mapContainerRef.current) return;
 
     if (!mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
@@ -200,7 +204,7 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
             </div>
             <div><strong>IP:</strong> ${p.ip_address}</div>
             <div><strong>状态:</strong> ${statusBadge}</div>
-            <div><strong>协议:</strong> ${p.method.toUpperCase()}</div>
+            <div><strong>协议:</strong> ${(p.method || 'ICMP').toUpperCase()}</div>
             <div><strong>分组:</strong> ${p.group_name || '未分组'}</div>
             ${p.location_address ? `<div style="color:#475569;margin-top:2px;"><strong>位置:</strong> ${p.location_address}</div>` : ''}
           </div>
@@ -215,16 +219,52 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
         mapInstanceRef.current.setView([mapConfig.center_lat, mapConfig.center_lng], mapConfig.default_zoom);
       }
     }
-  }, [centerView, data?.map_points]);
+  }, [data?.map_points]);
+
+  // 当中心视窗切换回拓扑地图时，唤醒 Leaflet 重新计算容器几何尺寸，杜绝灰屏与错位
+  useEffect(() => {
+    if (centerView === 'map' && mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [centerView]);
+
+  // 组件卸载时释放 Leaflet 实例
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
 
   const summary = data?.summary || {
     total_devices: 0,
     online_devices: 0,
     offline_devices: 0,
     unknown_devices: 0,
+    disabled_devices: 0,
     uptime_ratio: 0,
     active_alerts_count: 0
   };
+
+  const allGridDevices = data?.grid_devices || data?.map_points || [];
+  const filteredGridDevices = allGridDevices.filter((d: any) => {
+    if (gridFilter !== 'ALL' && d.status !== gridFilter) {
+      return false;
+    }
+    if (gridSearch.trim()) {
+      const q = gridSearch.trim().toLowerCase();
+      const matchName = d.name?.toLowerCase().includes(q);
+      const matchIp = d.ip_address?.toLowerCase().includes(q);
+      const matchGroup = d.group_name?.toLowerCase().includes(q);
+      return matchName || matchIp || matchGroup;
+    }
+    return true;
+  });
 
   return (
     <div style={{
@@ -523,53 +563,251 @@ export const Cockpit: React.FC<CockpitProps> = ({ onEnterAdmin }) => {
             </div>
           )}
 
-          {/* 地图视图 */}
-          {centerView === 'map' ? (
-            <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-          ) : (
-            /* 状态矩阵网格视图 */
-            <div style={{ flex: 1, padding: '3.5rem 1.25rem 1.25rem', overflowY: 'auto' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '0.75rem'
-              }}>
-                {data?.map_points?.map((p: any) => {
-                  let badge = 'badge-online';
-                  if (p.status === 'OFFLINE') badge = 'badge-offline';
-                  else if (p.status === 'UNKNOWN') badge = 'badge-unknown';
-                  else if (p.status === 'DISABLED') badge = 'badge-disabled';
+          {/* 1. 地图视图容器 (常驻 DOM 树，杜绝与 React 协调器冲突，通过 display 切换) */}
+          <div
+            ref={mapContainerRef}
+            style={{
+              width: '100%',
+              height: '100%',
+              display: centerView === 'map' ? 'block' : 'none',
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1
+            }}
+          />
 
-                  return (
-                    <div
-                      key={p.id}
-                      style={{
-                        padding: '0.75rem',
-                        borderRadius: '0.5rem',
-                        backgroundColor: '#0f172a',
-                        border: '1px solid #1e293b',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.35rem'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {p.name}
-                        </span>
-                        <span className={`badge ${badge}`}>{p.status}</span>
-                      </div>
-                      <code style={{ fontSize: '0.75rem', color: '#38bdf8' }}>{p.ip_address}</code>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748b', borderTop: '1px solid #1e293b', paddingTop: '4px' }}>
-                        <span>{p.group_name}</span>
-                        <span>{p.method.toUpperCase()}</span>
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* 2. 状态矩阵网格视图 (常驻 DOM 树，全量受控节点，按故障优先排序，支持搜索与筛选) */}
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: centerView === 'grid' ? 'flex' : 'none',
+              flexDirection: 'column',
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              backgroundColor: '#070a13',
+              padding: '3.6rem 1.25rem 1.25rem',
+              overflow: 'hidden'
+            }}
+          >
+            {/* 网格顶栏：快捷状态过滤与实时检索 */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              marginBottom: '1rem',
+              flexWrap: 'wrap'
+            }}>
+              {/* 状态药丸筛选 */}
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${gridFilter === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setGridFilter('ALL')}
+                  style={{ padding: '0.25rem 0.65rem' }}
+                >
+                  全部 ({allGridDevices.length})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${gridFilter === 'OFFLINE' ? 'btn-danger' : 'btn-secondary'}`}
+                  onClick={() => setGridFilter('OFFLINE')}
+                  style={{ padding: '0.25rem 0.65rem' }}
+                >
+                  🔴 故障离线 ({summary.offline_devices})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${gridFilter === 'UNKNOWN' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    backgroundColor: gridFilter === 'UNKNOWN' ? '#d97706' : undefined,
+                    borderColor: gridFilter === 'UNKNOWN' ? '#b45309' : undefined
+                  }}
+                  onClick={() => setGridFilter('UNKNOWN')}
+                >
+                  🟡 探测中 ({summary.unknown_devices})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${gridFilter === 'ONLINE' ? 'btn-success' : 'btn-secondary'}`}
+                  onClick={() => setGridFilter('ONLINE')}
+                  style={{ padding: '0.25rem 0.65rem' }}
+                >
+                  🟢 正常在线 ({summary.online_devices})
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${gridFilter === 'DISABLED' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    backgroundColor: gridFilter === 'DISABLED' ? '#475569' : undefined,
+                    borderColor: gridFilter === 'DISABLED' ? '#334155' : undefined
+                  }}
+                  onClick={() => setGridFilter('DISABLED')}
+                >
+                  ⚪ 停用 ({summary.disabled_devices || 0})
+                </button>
+              </div>
+
+              {/* 实时搜索 */}
+              <div style={{ position: 'relative', width: '240px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="按名称 / IP / 分组过滤..."
+                  value={gridSearch}
+                  onChange={(e) => setGridSearch(e.target.value)}
+                  style={{
+                    paddingLeft: '2rem',
+                    paddingRight: gridSearch ? '2rem' : '0.75rem',
+                    height: '30px',
+                    fontSize: '0.75rem',
+                    borderRadius: '0.375rem'
+                  }}
+                />
+                {gridSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setGridSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: '8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
-          )}
+
+            {/* 网格设备卡片流 */}
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+              {filteredGridDevices.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#64748b', fontSize: '0.875rem' }}>
+                  未检索到符合条件的受控设备
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                  gap: '0.75rem'
+                }}>
+                  {filteredGridDevices.map((p: any) => {
+                    let badgeClass = 'badge-online';
+                    let statusText = '🟢 在线';
+                    let borderColor = '#1e293b';
+                    let glowBox = 'none';
+
+                    if (p.status === 'OFFLINE') {
+                      badgeClass = 'badge-offline';
+                      statusText = '🔴 离线';
+                      borderColor = 'rgba(239, 68, 68, 0.4)';
+                      glowBox = '0 0 10px rgba(239, 68, 68, 0.15)';
+                    } else if (p.status === 'UNKNOWN') {
+                      badgeClass = 'badge-unknown';
+                      statusText = '🟡 探测中';
+                      borderColor = 'rgba(245, 158, 11, 0.4)';
+                    } else if (p.status === 'DISABLED') {
+                      badgeClass = 'badge-disabled';
+                      statusText = '⚪ 停用';
+                      borderColor = '#334155';
+                    }
+
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          padding: '0.8rem',
+                          borderRadius: '0.5rem',
+                          backgroundColor: '#0f172a',
+                          border: `1px solid ${borderColor}`,
+                          boxShadow: glowBox,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.4rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              fontSize: '0.85rem',
+                              color: '#f8fafc',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              maxWidth: '135px'
+                            }}
+                            title={p.name}
+                          >
+                            {p.name}
+                          </span>
+                          <span className={`badge ${badgeClass}`} style={{ fontSize: '0.7rem' }}>
+                            {statusText}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <code style={{ fontSize: '0.8rem', color: '#38bdf8', fontFamily: 'monospace' }}>
+                            {p.ip_address}
+                          </code>
+                          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+                            {(p.method || 'ICMP').toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: '0.7rem',
+                          color: '#64748b',
+                          borderTop: '1px solid #1e293b',
+                          paddingTop: '6px',
+                          marginTop: '2px'
+                        }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: p.group_color || '#3b82f6'
+                            }}></span>
+                            <span style={{ maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {p.group_name || '未分组'}
+                            </span>
+                          </span>
+                          {p.status === 'OFFLINE' && p.consecutive_failures > 0 ? (
+                            <span style={{ color: '#ef4444', fontWeight: 600 }}>
+                              连断 {p.consecutive_failures} 次
+                            </span>
+                          ) : p.last_probe_time ? (
+                            <span>{new Date(p.last_probe_time).toLocaleTimeString()}</span>
+                          ) : (
+                            <span>-</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* 右栏：告警实时广播墙与事件流水 */}

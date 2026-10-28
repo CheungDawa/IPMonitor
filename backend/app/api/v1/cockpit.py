@@ -53,6 +53,25 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "last_probe_time": d.last_probe_time.isoformat() if d.last_probe_time else None
         })
 
+    # 2.5 全量设备状态矩阵 (包含所有受控设备，故障设备置顶排序)
+    all_devices_query = db.query(Device).all()
+    status_order = {"OFFLINE": 0, "UNKNOWN": 1, "ONLINE": 2, "DISABLED": 3}
+    all_devices_sorted = sorted(all_devices_query, key=lambda x: (status_order.get(x.status, 4), x.name.lower()))
+    grid_devices = []
+    for d in all_devices_sorted:
+        grid_devices.append({
+            "id": d.id,
+            "name": d.name,
+            "ip_address": d.ip_address,
+            "device_type": d.device_type,
+            "group_name": d.group.name if d.group else "未分组",
+            "group_color": d.group.color if d.group else "#3b82f6",
+            "status": d.status,
+            "method": d.method,
+            "consecutive_failures": d.failure_count,
+            "last_probe_time": d.last_probe_time.isoformat() if d.last_probe_time else None
+        })
+
     # 3. 分组健康度矩阵
     groups = db.query(DeviceGroup).all()
     group_health = []
@@ -162,6 +181,7 @@ def get_cockpit_overview(db: Session = Depends(get_db)):
             "active_alerts_count": len(active_alerts)
         },
         "map_points": map_points,
+        "grid_devices": grid_devices,
         "map_config": map_config,
         "total_unlocated": total - len(map_points),
         "group_health": group_health,

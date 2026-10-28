@@ -10,6 +10,8 @@ def test_cockpit_overview():
     data = res.json()["data"]
     assert "summary" in data
     assert "map_points" in data
+    assert "grid_devices" in data
+    assert "map_config" in data
     assert "group_health" in data
     assert "latency_nodes" in data
     assert "active_alerts" in data
