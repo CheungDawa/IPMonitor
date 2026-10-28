@@ -1,0 +1,28 @@
+services:
+  ipmonitor-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ipmonitor-web:latest
+    container_name: ipmonitor-web
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      # 持久化数据库与运行时日志
+      - ./data:/app/data
+      # 持久化在线热备份文件
+      - ./backups:/app/backups
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - SECRET_KEY=${SECRET_KEY:-ipmonitor_web_super_secret_key_change_in_production_2026}
+    # 授予容器底层 raw socket 能力以允许无特权执行 ICMP Ping 探活
+    cap_add:
+      - NET_RAW
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

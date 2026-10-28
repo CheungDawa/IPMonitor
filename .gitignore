@@ -1,5 +1,12 @@
-# 敏感私密配置文件 (包含个人邮箱SMTP密码与真实内网拓扑)
+# 敏感私密配置文件
 config.json
+.env
+
+# 运行时数据库与数据目录
+data/
+*.db
+*.sqlite
+*.sqlite3
 
 # 运行时日志与临时数据
 *.log
@@ -7,10 +14,18 @@ IPMonitor_run.log
 *.tmp
 _temp_*
 
-# Python 编译缓存
+# Python 虚拟环境与编译缓存
+venv/
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+
+# Node / 前端构建产物 (保留生产打包 dist 供免 Node 环境直接运行)
+frontend/node_modules/
+frontend/.vite/
+# frontend/dist/
 
 # PyInstaller 打包构建目录
 build/
@@ -21,7 +36,8 @@ dist/
 .vscode/
 .idea/
 
-# 历史归档与子项目仓库
+# 历史归档与备份
 archive/
 repos/
+backups/
 *.bak
